@@ -11,15 +11,8 @@ from sqlalchemy.orm import sessionmaker, Session
 #  제너레이터 함수의 반환 타입을 정의하는 타입 힌트
 from typing import Generator
 
-# 의존성 주입 도구
-from fastapi import Depends
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
-
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
-
+SQLALCHEMY_DATABASE_URL =  "mysql+pymysql://root:tmvlzj12@localhost/ddrawry"
 
 # 엔진 생성
 engine = create_engine(SQLALCHEMY_DATABASE_URL)

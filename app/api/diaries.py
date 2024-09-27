@@ -8,21 +8,21 @@ router = APIRouter(prefix="/diaries")
 
 
 class Mood(Enum):
-    NORMAL = 1
+    SMILE = 1
     SAD = 2
-    SOSO = 3
+    MEDIOCRE = 3
     ANGRY = 4
-    FUNNY = 5
+    EXCITED = 5
     HAPPY = 6
 
 
 class Weather(Enum):
-    SUN = 1
-    RAIN = 2
-    SNOW = 3
-    STORM = 4
-    CLOUD = 5
-    WIND = 6
+    SUNNY = 1
+    RAINY = 2
+    SNOWY = 3
+    THUNDERSTORM = 4
+    CLOUDY = 5
+    WINDY = 6
 
 
 class Diary(BaseModel):
@@ -45,25 +45,142 @@ class TempDiary(BaseModel):
     story: str | None = None
 
 
-# /diaries
-@router.post("/")
-async def new_diary(diary: Diary):
-    print(diary)
-    # diary.mood = diary.mood.name
-    # diary.weather = diary.weather.name
-    return {"status": 201, "message": "다이어리 저장 성공", "id": 1}
+
+diaries_db = []
+diary_id_counter = 1
+fixed_nickname = "팡팡이"
+
+@router.post("/diaries", status_code=201)
+async def save_diary(diary: Diary):
+    global diary_id_counter
+
+    # 필수 요소 체크
+    missing_fields = []
+    
+    if not diary.title:
+        missing_fields.append("title")
+    if not diary.date:
+        missing_fields.append("date")
+    if not diary.mood:
+        missing_fields.append("mood")
+    if not diary.weather:
+        missing_fields.append("weather")
+    if not diary.story:
+        missing_fields.append("story")
+
+    if missing_fields:
+        return {
+            "status": 400,
+            "type": "error",
+            "message": f"다이어리를 작성하지 못했습니다. 필수 요소({', '.join(missing_fields)})가 누락되었습니다."
+        }
+    
+    # 다이어리 정보를 저장
+    diary_entry = {
+        "id": diary_id_counter,
+        "date": diary.date,
+        "nickname": fixed_nickname,
+        "mood": diary.mood,
+        "weather": diary.weather,
+        "title": diary.title,
+        "image": diary.image,  # 선택적 필드
+        "story": diary.story,
+    }
+    diaries_db.append(diary_entry)
+
+    # ID 증가
+    diary_id_counter += 1
+
+    return {
+        "status": 201,
+        "message": "다이어리 저장 성공",
+        "id": diary_entry["id"]
+    }
 
 
-# /diaries/{id}
 @router.put("/{id}")
 async def edit_diary(id: int, diary: Diary):
-    return {"status": 200, "message": "다이어리 수정 성공", "id": id}
+    global diary_id_counter
+
+    # 다이어리 ID가 존재하는지 확인
+    existing_diary = next((d for d in diaries_db if d["id"] == id), None)
+    if existing_diary is None:
+        return {
+            "status": 404,
+            "type": "error",
+            "message": f"다이어리 ID {id}가 존재하지 않습니다."
+        }
+    
+
+    # 필수 요소 체크
+    missing_fields = []
+    
+    if not diary.title:
+        missing_fields.append("title")
+    if not diary.date:
+        missing_fields.append("date")
+    if not diary.mood:
+        missing_fields.append("mood")
+    if not diary.weather:
+        missing_fields.append("weather")
+    if not diary.story:
+        missing_fields.append("story")
+
+    if missing_fields:
+        return {
+            "status": 400,
+            "type": "error",
+            "message": f"다이어리를 수정하지 못했습니다. 필수 요소({', '.join(missing_fields)})가 누락되었습니다."
+        }
+
+    # 기존 다이어리 수정
+    existing_diary.update({
+        "date": diary.date,
+        "nickname": fixed_nickname,  # 고정된 닉네임 사용
+        "mood": diary.mood,
+        "weather": diary.weather,
+        "title": diary.title,
+        "image": diary.image,
+        "story": diary.story,
+    })
+
+    return {
+        "status": 200,
+        "message": "다이어리 수정 성공",
+        "id": id
+    }
 
 
-# /diaries/temp/{id}
-@router.put("/temp/{id}")
-async def save_temp(id: int, diary: TempDiary):
-    return {"status": 200, "message": "다이어리 임시 저장 성공", "temp_id": id}
+# 임시 다이어리 저장소
+temp_diaries_db = []
+temp_id_counter = 20  # 임시 다이어리 ID 시작값
+
+@router.post("/diaries/temp", status_code=200)
+async def save_temp_diary(temp_diary: TempDiary):
+    global temp_id_counter
+
+    # 임시 다이어리 정보 저장
+    temp_diary_entry = {
+        "temp_id": temp_id_counter,
+        "date": temp_diary.date,
+        "nickname": fixed_nickname,
+        "mood": temp_diary.mood,
+        "weather": temp_diary.weather,
+        "image": temp_diary.image,
+        "story": temp_diary.story,
+    }
+    
+    # 임시 다이어리 저장소에 추가
+    temp_diaries_db.append(temp_diary_entry)
+
+    # ID 증가
+    temp_id_counter += 1
+
+    return {
+        "status": 200,
+        "message": "다이어리 임시 저장 성공",
+        "temp_id": temp_diary_entry["temp_id"]
+    }
 
 
 # /diaries?date
@@ -75,10 +192,17 @@ async def search_diary_exist(date: int):
             "message": "작성한 다이어리가 존재합니다.",
             "data": {"date": "2024-01-01", "is_exist": True, "id": 30},
         }
+    elif date == 20240910:
+        return {
+            "status": 200,
+            "message": "작성한 다이어리가 존재합니다.",
+            "data": {"date": "2024-01-02", "is_exist": True, "id": 31},
+        }
+    # 다른 날짜 추가
     return {
         "status": 200,
         "message": "작성한 다이어리가 존재하지 않습니다.",
-        "data": {"date": "2024-01-01", "is_exist": False, "id": 55},
+        "data": {"date": str(date), "is_exist": False, "id": 55},
     }
 
 
@@ -165,7 +289,7 @@ async def search_diary(keyword: str = ""):
                 "id": 3,
                 "date": "2024-08-20",
                 "title": f"{keyword} 가기 싫다",
-                "image": "띠로리_로고.jpg",
+                "image": None,
                 "bookmark": 0,
             },
         ],
@@ -185,14 +309,7 @@ async def get_like_diaries():
                 "title": "신나는 산책을 했따",
                 "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...AYH/",
                 "bookmark": 1,
-            },
-            {
-                "id": 2,
-                "date": "2024-08-19",
-                "title": "냠냠 맛있는거 먹기",
-                "image": "띠로리 로고.jpg",
-                "bookmark": 0,
-            },
+            }
         ],
     }
 

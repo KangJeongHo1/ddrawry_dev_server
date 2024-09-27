@@ -2,8 +2,8 @@ from fastapi import APIRouter
 
 from .users import router as users_router
 from .diaries import router as diaries_router
-from .auth import router as auth_router
-from .auth import is_valid_token
+# from .auth import router as auth_router
+# from .auth import is_valid_token
 from fastapi import APIRouter, HTTPException, Request
 
 V1 = APIRouter(prefix="/api/v1")
@@ -15,7 +15,7 @@ V1.include_router(users_router)
 V1.include_router(diaries_router)
 
 # /api/v1/auth
-V1.include_router(auth_router)
+# V1.include_router(auth_router)
 
 
 @V1.get("/", tags=["v1"])

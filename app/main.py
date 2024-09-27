@@ -1,11 +1,8 @@
 from fastapi import FastAPI, Request
-from .database import engine, Base
 from .models import *  # 모델을 임포트하여 테이블을 생성하도록 함
 from fastapi.middleware.cors import CORSMiddleware
 
 
-# DB 테이블을 생성
-Base.metadata.create_all(bind=engine) 
 
 from .api.v1 import V1
 

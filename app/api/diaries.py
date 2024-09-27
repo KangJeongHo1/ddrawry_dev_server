@@ -50,7 +50,7 @@ diaries_db = []
 diary_id_counter = 1
 fixed_nickname = "팡팡이"
 
-@router.post("/diaries", status_code=201)
+@router.post("", status_code=201)
 async def save_diary(diary: Diary):
     global diary_id_counter
 

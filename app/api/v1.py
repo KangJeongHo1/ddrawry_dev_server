@@ -21,8 +21,5 @@ V1.include_router(diaries_router)
 @V1.get("/", tags=["v1"])
 async def start_v1(request: Request):
     access_token = request.cookies.get("access_token")
-    
-    if not access_token or not is_valid_token(access_token):
-        raise HTTPException(status_code=401, detail="Invalid or missing access token")
 
     return {"msg": "DDrawry's API version 1"}

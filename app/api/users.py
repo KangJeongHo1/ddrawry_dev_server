@@ -7,29 +7,64 @@ router = APIRouter(prefix="/users")
 
 # /users/settings
 class Settings(BaseModel):
-    alram: bool | None = False
-    darkmode: bool | None = False
+    dark_mode: bool | None = False
+    notification: bool | None = False
+
+
+current_settings = {
+    "dark_mode": 0,
+    "notification": 0
+}
 
 
 @router.patch("/settings")
 async def settings(settings: Settings):
-    return {"settings": settings}
+    responses = []
+
+    # 다크 모드 설정 변경
+    if "dark_mode" in settings.dict(exclude_unset=True):
+        if settings.dark_mode not in [0, 1]:
+            return {
+                "status": 400,
+                "message": "다크 모드는 0 또는 1로 설정해야 합니다."
+            }
+        current_settings["dark_mode"] = settings.dark_mode
+        responses.append("다크모드 변경 성공")
+
+    # 알람 설정 변경
+    if "notification" in settings.dict(exclude_unset=True):
+        if settings.notification not in [0, 1]:
+            return {
+                "status": 400,
+                "message": "알람 설정은 0 또는 1로 설정해야 합니다."
+            }
+        current_settings["notification"] = settings.notification
+        responses.append("알람 설정 변경 성공")
+
+    return {
+        "status": 200,
+        "messages": responses
+    }
+
 
 # /users/nickname
 @router.put("/nickname")
 async def nickname(request: Request):
     json = await request.json()
-    # request body(json)가 업는 경우
+
+    # request body가 없을 때 처리
     if not json:
         return {"status": 409, "message": "데이터가 없습니다."}
 
     nickname = json.get("nickname")
+    
+    # json에 nickname 필드가 없을 때 처리
     if not nickname:
-        # json에 nickname 데이터가 없는 경우
         return {"status": 409, "message": "닉네임 데이터 없음", "request": json}
 
-    # 닉네임 중복을 테스트 하기 위해 'admin', 'test' 인 경우 중복으로 판정
+    # 닉네임 중복 확인
     if nickname in ["admin", "test"]:
         return {"status": 409, "message": "닉네임 중복"}
-    # 그 외에는 닉네임 변경 성공 return
+    
+    # 닉네임 변경 성공 처리
     return {"status": 200, "message": "닉네임 변경 성공"}

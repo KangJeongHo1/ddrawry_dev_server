@@ -16,10 +16,9 @@ current_settings = {
     "notification": 0
 }
 
-
 @router.patch("/settings")
 async def settings(settings: Settings):
-    responses = []
+    message = None  # 초기 메시지 변수 설정
 
     # 다크 모드 설정 변경
     if "dark_mode" in settings.dict(exclude_unset=True):
@@ -29,7 +28,7 @@ async def settings(settings: Settings):
                 "message": "다크 모드는 0 또는 1로 설정해야 합니다."
             }
         current_settings["dark_mode"] = settings.dark_mode
-        responses.append("다크모드 변경 성공")
+        message = f"다크모드 변경 성공: {'true' if settings.dark_mode == 1 else 'false'}"  # 메시지에 현재 상태 추가
 
     # 알람 설정 변경
     if "notification" in settings.dict(exclude_unset=True):
@@ -39,12 +38,20 @@ async def settings(settings: Settings):
                 "message": "알람 설정은 0 또는 1로 설정해야 합니다."
             }
         current_settings["notification"] = settings.notification
-        responses.append("알람 설정 변경 성공")
+        message = f"알람 설정 변경 성공: {'true' if settings.notification == 1 else 'false'}"  # 메시지에 현재 상태 추가
+
+    # 메시지가 설정되지 않은 경우
+    if not message:
+        return {
+            "status": 200,
+            "message": "설정이 변경되지 않았습니다."
+        }
 
     return {
         "status": 200,
-        "messages": responses
+        "message": message  # 최종 메시지 반환
     }
+
 
 
 # /users/nickname

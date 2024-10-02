@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Request, Query
+from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from enum import Enum
 from typing import List, Optional
 from fastapi.responses import JSONResponse
+
 
 router = APIRouter(prefix="/diaries")
 
@@ -50,31 +51,11 @@ diaries_db = []
 diary_id_counter = 1
 fixed_nickname = "팡팡이"
 
+# 다이어리 작성 API
 @router.post("", status_code=201)
 async def save_diary(diary: Diary):
     global diary_id_counter
 
-    # 필수 요소 체크
-    missing_fields = []
-    
-    if not diary.title:
-        missing_fields.append("title")
-    if not diary.date:
-        missing_fields.append("date")
-    if not diary.mood:
-        missing_fields.append("mood")
-    if not diary.weather:
-        missing_fields.append("weather")
-    if not diary.story:
-        missing_fields.append("story")
-
-    if missing_fields:
-        return {
-            "status": 400,
-            "type": "error",
-            "message": f"다이어리를 작성하지 못했습니다. 필수 요소({', '.join(missing_fields)})가 누락되었습니다."
-        }
-    
     # 다이어리 정보를 저장
     diary_entry = {
         "id": diary_id_counter,
@@ -98,19 +79,33 @@ async def save_diary(diary: Diary):
     }
 
 
+diaries_db = [
+    {
+        "id": 1,
+        "date": "2024-08-13",
+        "title": "신나는 산책을 했따",
+        "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...AYH/",
+        "mood": "happy",
+        "weather": "sunny",
+        "story": "아침에 쿨쿨자고 ,,,,"
+    },
+    {
+        "id": 2,
+        "date": "2024-08-19",
+        "title": "냠냠 맛있는거 먹기",
+        "image": None,
+        "mood": "neutral",
+        "weather": "cloudy",
+        "story": "오늘 점심에 맛있는 음식을 먹었어요."
+    }
+]
+
 @router.put("/{id}")
 async def edit_diary(id: int, diary: Diary):
-    global diary_id_counter
-
     # 다이어리 ID가 존재하는지 확인
     existing_diary = next((d for d in diaries_db if d["id"] == id), None)
     if existing_diary is None:
-        return {
-            "status": 404,
-            "type": "error",
-            "message": f"다이어리 ID {id}가 존재하지 않습니다."
-        }
-    
+        raise HTTPException(status_code=404, detail=f"다이어리 ID {id}이 존재하지 않습니다.")
 
     # 필수 요소 체크
     missing_fields = []
@@ -127,20 +122,18 @@ async def edit_diary(id: int, diary: Diary):
         missing_fields.append("story")
 
     if missing_fields:
-        return {
-            "status": 400,
-            "type": "error",
-            "message": f"다이어리를 수정하지 못했습니다. 필수 요소({', '.join(missing_fields)})가 누락되었습니다."
-        }
+        raise HTTPException(
+            status_code=400,
+            detail=f"다이어리를 수정하지 못했습니다. 필수 요소({', '.join(missing_fields)})가 누락되었습니다."
+        )
 
     # 기존 다이어리 수정
     existing_diary.update({
         "date": diary.date,
-        "nickname": fixed_nickname,  # 고정된 닉네임 사용
-        "mood": diary.mood,
-        "weather": diary.weather,
         "title": diary.title,
         "image": diary.image,
+        "mood": diary.mood,
+        "weather": diary.weather,
         "story": diary.story,
     })
 
@@ -267,7 +260,7 @@ async def get_like_diaries():
                 "date": "2024-08-13",
                 "title": "신나는 산책을 했따",
                 "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...AYH/",
-                "bookmark": 1,
+                "bookmark": True
             }
         ],
     }

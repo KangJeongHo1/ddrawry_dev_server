@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from enum import Enum
+from datetime import datetime
 from typing import List, Optional
 from fastapi.responses import JSONResponse
 
@@ -79,26 +80,6 @@ async def save_diary(diary: Diary):
     }
 
 
-diaries_db = [
-    {
-        "id": 1,
-        "date": "2024-08-13",
-        "title": "신나는 산책을 했따",
-        "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...AYH/",
-        "mood": "happy",
-        "weather": "sunny",
-        "story": "아침에 쿨쿨자고 ,,,,"
-    },
-    {
-        "id": 2,
-        "date": "2024-08-19",
-        "title": "냠냠 맛있는거 먹기",
-        "image": None,
-        "mood": "neutral",
-        "weather": "cloudy",
-        "story": "오늘 점심에 맛있는 음식을 먹었어요."
-    }
-]
 
 @router.put("/{id}")
 async def edit_diary(id: int, diary: Diary):
@@ -214,7 +195,7 @@ async def like_diary(id: int):
     # id가 999인 경우 좋아요 취소
     if id == 999:
         return {"status": 200, "id": 999, "bookmark": False}
-    return {"status": 200, "id": 1, "bookmark": True}
+    return {"status": 200, "id": id, "bookmark": True}
 
 
 # /diaries/search?keyword={keyword}
@@ -248,23 +229,6 @@ async def search_diary(keyword: str = Query("", description="검색 키워드"))
     }
 
 
-# /diaries/like
-@router.get("/like")
-async def get_like_diaries():
-    return {
-        "status": 200,
-        "message": "좋아요 누른 일기 조회 완료",
-        "data": [
-            {
-                "id": 1,
-                "date": "2024-08-13",
-                "title": "신나는 산책을 했따",
-                "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...AYH/",
-                "bookmark": True
-            }
-        ],
-    }
-
 
 # 더미
 diaries_list = [
@@ -277,14 +241,128 @@ diaries_list = [
     },
     {
         "id": 2,
-        "date": "2024-08-19",
-        "title": "냠냠 맛있는거 먹기",
+        "date": "2024-01-19",
+        "title": "캬캬캬캬캬",
+        "image": "base64파일이 들어갈 자리",  # 이미지가 없는 경우
+        "bookmark": True
+    },
+    {
+        "id": 3,
+        "date": "2025-12-19",
+        "title": "운동 가기 귀찮다 배드민턴 재밌다",
         "image": None,  # 이미지가 없는 경우
+        "bookmark": True
+    },
+    {
+        "id": 4,
+        "date": "2023-09-10",
+        "title": "쿨쿨핑",
+        "image": "base64파일이 들어갈 자리",  # 이미지가 없는 경우
+        "bookmark": True
+    },
+    {
+        "id": 5,
+        "date": "2024-09-11",
+        "title": "냠냠 맛있는거 먹기",
+        "image": "base64파일이 들어갈 자리",  # 이미지가 없는 경우
+        "bookmark": True
+    }
+]
+
+
+@router.get("/like")
+async def get_like_diaries(
+    type: str = Query(..., description="필터 타입, 'all' 또는 'month'"),
+    date: str = Query(None, description="연월 필터 (형식: YYYYMM)")
+):
+
+    # 타입이 'all'인 경우: 모든 북마크된 일기를 반환
+    if type == "all":
+        liked_diaries = [diary for diary in diaries_list if diary["bookmark"]]
+        
+        # 최신 날짜 순으로 정렬 (가장 최근 날짜가 처음에 오도록)
+        liked_diaries = sorted(liked_diaries, key=lambda x: datetime.strptime(x["date"], "%Y-%m-%d"), reverse=True)
+        
+        message = "좋아요 누른 모든 일기 조회 완료"
+    
+    # 타입이 'month'인 경우: 특정 연월(date)의 북마크된 일기를 필터링하여 반환
+    elif type == "month":
+        if not date or len(date) != 6:
+            raise HTTPException(status_code=400, detail="올바른 연월(YYYYMM) 형식으로 입력해주세요.")
+        
+        year = date[:4]
+        month = date[4:]
+        
+        liked_diaries = [
+            diary for diary in diaries_list 
+            if diary["bookmark"] and diary["date"].startswith(f"{year}-{month}")
+        ]
+        message = f"{year}년 {month}월 좋아요 누른 일기 조회 완료"
+    else:
+        raise HTTPException(status_code=400, detail="잘못된 type 값입니다. 'all' 또는 'month'로 요청하세요.")
+    
+    if not liked_diaries:
+        raise HTTPException(status_code=404, detail="좋아요를 누른 다이어리가 없습니다.")
+
+    return {
+        "status": 200,
+        "message": message,
+        "data": liked_diaries,
+    }
+
+
+
+from datetime import datetime
+from fastapi import Query
+from fastapi.responses import JSONResponse
+
+diaries_db = [
+    {
+        "id": 1,
+        "date": "2024-08-13",
+        "title": "8월 두번째",
+        "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...AYH/",
+        "bookmark": True
+    },
+    {
+        "id": 2,
+        "date": "2024-09-29",
+        "title": "9월 세번째",
+        "image": None,
+        "bookmark": False
+    },
+    {
+        "id": 3,
+        "date": "2024-08-09",
+        "title": "8월 첫번째",
+        "image": None,
+        "bookmark": True
+    },
+    {
+        "id": 4,
+        "date": "2024-09-09",
+        "title": "9월 두번째",
+        "image": None,
+        "bookmark": True
+    },
+    {
+        "id": 5,
+        "date": "2024-08-30",
+        "title": "8월 세번째",
+        "image": None,
+        "bookmark": False
+    },
+    {
+        "id": 6,
+        "date": "2024-09-01",
+        "title": "9월 첫번째",
+        "image": None,
         "bookmark": False
     }
 ]
 
 # /diaries/main?type=calender&date=202406
+# /diaries/main?type=list&date=202406
 @router.get("/main")
 async def get_main_diaries(type: str = Query(..., description="조회 유형 (list 또는 calender)"),
                            date: str = Query(..., description="조회할 년월 (예: 202408)")):
@@ -296,37 +374,45 @@ async def get_main_diaries(type: str = Query(..., description="조회 유형 (li
         })
 
     # 다이어리 데이터를 날짜 기준으로 필터링
-    filtered_diaries = [diary for diary in diaries_list if diary["date"].startswith(date[:4] + "-" + date[4:])]
+    filtered_diaries = [diary for diary in diaries_db if diary["date"].startswith(date[:4] + "-" + date[4:])]
 
-    # type이 "calender"인 경우
+    # type이 "calender"인 경우: 오래된 순으로 정렬
     if type == "calender":
-        calendar_data = [
-            {
-                "id": diary["id"],
-                "date": diary["date"],
-                "image": diary["image"],
-                "bookmark": diary["bookmark"]
-            }
-            for diary in filtered_diaries
-        ]
+        calendar_data = sorted(
+            [
+                {
+                    "id": diary["id"],
+                    "date": diary["date"],
+                    "image": diary["image"],
+                    "bookmark": diary["bookmark"]
+                }
+                for diary in filtered_diaries
+            ],
+            key=lambda x: datetime.strptime(x["date"], "%Y-%m-%d"),  # 날짜 기준으로 정렬
+            reverse=False  # 오래된 순
+        )
         return JSONResponse(content={
             "status": 200,
             "message": "다이어리 캘린더형 조회 완료",
             "data": calendar_data
         })
 
-    # type이 "list"인 경우
+    # type이 "list"인 경우: 최신순으로 정렬
     elif type == "list":
-        list_data = [
-            {
-                "id": diary["id"],
-                "date": diary["date"],
-                "title": diary["title"],
-                "image": diary["image"],
-                "bookmark": diary["bookmark"]
-            }
-            for diary in filtered_diaries
-        ]
+        list_data = sorted(
+            [
+                {
+                    "id": diary["id"],
+                    "date": diary["date"],
+                    "title": diary["title"],
+                    "image": diary["image"],
+                    "bookmark": diary["bookmark"]
+                }
+                for diary in filtered_diaries
+            ],
+            key=lambda x: datetime.strptime(x["date"], "%Y-%m-%d"),  # 날짜 기준으로 정렬
+            reverse=True  # 최신순
+        )
         return JSONResponse(content={
             "status": 200,
             "message": "다이어리 목록형 조회 완료",
@@ -338,6 +424,7 @@ async def get_main_diaries(type: str = Query(..., description="조회 유형 (li
         "status": 400,
         "message": "잘못된 조회 유형입니다. 'list' 또는 'calender'를 사용하세요."
     })
+
 
 @router.get("/{id}")
 async def get_diary(id: int, edit: str = None):

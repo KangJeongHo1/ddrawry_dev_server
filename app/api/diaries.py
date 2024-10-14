@@ -76,7 +76,9 @@ async def save_diary(diary: Diary):
     return {
         "status": 201,
         "message": "다이어리 저장 성공",
-        "id": diary_entry["id"]
+        "data": {
+            "id": diary_entry["id"]
+        }
     }
 
 
@@ -121,21 +123,20 @@ async def edit_diary(id: int, diary: Diary):
     return {
         "status": 200,
         "message": "다이어리 수정 성공",
-        "id": id
+        "data": {
+            "id": id
+        }
     }
 
 
 # 임시 다이어리 저장소
 temp_diaries_db = []
-temp_id_counter = 20  # 임시 다이어리 ID 시작값
 
-@router.post("/diaries/temp", status_code=200)
-async def save_temp_diary(temp_diary: TempDiary):
-    global temp_id_counter
-
+@router.put("/temp/{temp_id}")
+async def save_temp_diary(temp_id: int, temp_diary: TempDiary):
     # 임시 다이어리 정보 저장
     temp_diary_entry = {
-        "temp_id": temp_id_counter,
+        "temp_id": temp_id,  # 요청한 temp_id 사용
         "date": temp_diary.date,
         "nickname": fixed_nickname,
         "mood": temp_diary.mood,
@@ -143,42 +144,157 @@ async def save_temp_diary(temp_diary: TempDiary):
         "image": temp_diary.image,
         "story": temp_diary.story,
     }
-    
+
     # 임시 다이어리 저장소에 추가
     temp_diaries_db.append(temp_diary_entry)
-
-    # ID 증가
-    temp_id_counter += 1
 
     return {
         "status": 200,
         "message": "다이어리 임시 저장 성공",
-        "temp_id": temp_diary_entry["temp_id"]
+        "data": {
+            "temp_id": temp_diary_entry["temp_id"]
+        }
     }
 
+# 더미 데이터 리스트
+test_temp_diary = [
+    {
+        "id": 1,
+        "user_id": 1,
+        "date": "2024-01-01",
+        "nickname": "사과",
+        "title": "쿨쿨핑",
+        "weather": None,
+        "mood": None,
+        "story": None
+    },
+    {
+        "id": 2,
+        "user_id": 1,
+        "date": "2024-01-04",
+        "nickname": "사과",
+        "title": "냠냠핑",
+        "weather": None,
+        "mood": None,
+        "story": None
+    },
+    {
+        "id": 3,
+        "user_id": 1,
+        "date": "2024-01-07",
+        "nickname": "사과",
+        "title": "배고프다 밥먹고싶다 불닭볶음면",
+        "weather": None,
+        "mood": None,
+        "story": None
+    },
+    {
+        "id": 4,
+        "user_id": 1,
+        "date": "2024-01-12",
+        "nickname": "사과",
+        "title": "롤 마스터 가야지",
+        "weather": None,
+        "mood": None,
+        "story": "가나다라마바사아자차카타파하"
+    }
+]
 
-# /diaries?date=20240909
+@router.get("/temp/{temp_id}")
+async def get_temp_diary(temp_id: int):
+
+    # temp_id에 해당하는 다이어리 검색
+    diary_entry = next((item for item in test_temp_diary if item["id"] == temp_id), None)
+
+    if diary_entry is not None:
+        return {
+            "status": 200,
+            "message": "임시 다이어리를 조회 완료.",
+            "data": diary_entry
+        }
+    else:
+        return {
+            "status": 404,
+            "message": "임시 다이어리를 찾을 수 없습니다.",
+            "data": {}
+        }
+
+
+
+@router.post("/cancel")
+async def cancel_diary(data: dict):
+    # 날짜 형식 유효성 검사
+    try:
+        # date 값이 'YYYY-MM-DD' 형식인지 확인
+        datetime.strptime(data.get("date"), "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="잘못된 날짜 형식입니다. YYYY-MM-DD 형식을 사용하세요.")
+
+    # type 값이 'main'인지 확인
+    if data.get("type") == "main":
+        # 하드코딩된 응답 반환
+        return {
+            "status": 201,
+            "message": "새로운 임시 다이어리가 생성되었습니다.",
+            "data": {
+                "temp_id": 6  # 하드코딩된 temp_id 값
+            }
+        }
+    if data.get("type") == "write":
+        # 하드코딩된 응답 반환
+        return {
+            "status": 201,
+            "message": "임시 다이어리 상태가 변경되었습니다.",
+            "data": {
+                "temp_id": 5
+            }
+        }
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid request data")
+    
+
 @router.get("")
 async def search_diary_exist(date: int = Query(..., description="조회할 날짜 (예: 20240909)")):
-    if date == 20240909:
+    # 2024-08-13에 대한 조건
+
+    formatted_date = datetime.strptime(str(date), "%Y%m%d").strftime("%Y-%m-%d")
+
+    if date == 20240101:
         return {
             "status": 200,
             "message": "작성한 다이어리가 존재합니다.",
-            "data": {"date": "2024-09-09", "is_exist": True, "id": 30},
+            "is_exist": True,
+            "data": {
+                "date": formatted_date,
+                "diary_id": 1
+            }
         }
-    elif date == 20240910:
+    
+    # 2024-01-02에 대한 조건
+    elif date == 20240102:
         return {
             "status": 200,
-            "message": "작성한 다이어리가 존재합니다.",
-            "data": {"date": "2024-09-10", "is_exist": True, "id": 31},
+            "message": "임시 다이어리가 이미 존재합니다.",
+            "is_exist": False,
+            "is_temp_exist": True,
+            "temp_data": {
+                "date": formatted_date,
+                "temp_id": 2
+            }
         }
-    # 다른 날짜 추가
+
+    # 다른 날짜에 대한 처리: 임시 다이어리가 존재하지 않으며, 새로 생성
     return {
         "status": 200,
-        "message": "작성한 다이어리가 존재하지 않습니다.",
-        "data": {"date": str(date), "is_exist": False, "id": 55},
+        "message": "임시 다이어리가 존재하지 않아 새로 생성되었습니다.",
+        "is_exist": False,
+        "is_temp_exist": False,
+        "data": {
+            "date": formatted_date,
+            "temp_id": 3  # 임시로 생성된 temp_id 값
+        }
     }
-
 
 
 
@@ -194,8 +310,21 @@ async def delete_diary(id: int):
 async def like_diary(id: int):
     # id가 999인 경우 좋아요 취소
     if id == 999:
-        return {"status": 200, "id": 999, "bookmark": False}
-    return {"status": 200, "id": id, "bookmark": True}
+        return {"status": 200, 
+                "id": 999, 
+                "data": {
+                    "id": id,
+                    "bookmark": False
+                }
+        }
+    
+    return {"status": 200, 
+            "id": id, 
+            "data": {
+                "id": id,
+                "bookmark": True
+            }
+        }
 
 
 # /diaries/search?keyword={keyword}
@@ -461,7 +590,7 @@ async def get_diary(id: int, edit: str = None):
         "message": f"{id}번 다이어리 조회 완료",
         "data": {
             "id": 1,
-            "date": 20240813,
+            "date": "2024-08-13",
             "nickname": "팡팡이",
             "mood": 1,
             "weather": 3,
